@@ -85,7 +85,7 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in2, HIGH);
   }
   // Serial.println(powerA_int);
-  analogWrite(enA, abs(powerA_int / 2)); // Power
+  analogWrite(enA, abs(powerA_int*0.7)); // Power
 
  // Motor B
   if (powerB_int >= 0){ // Forward
@@ -98,7 +98,7 @@ void setEngineSpeed(float powerA, float powerB) {
   }
 
   // Serial.println(powerB_int);
-  analogWrite(enB, abs(powerB_int / 2)); // Power
+  analogWrite(enB, abs(powerB_int*0.7)); // Power
 
 }
 
