@@ -72,8 +72,8 @@ void setupInputChannels() {
 // Placeholder function to set the speed of an engine
 void setEngineSpeed(float powerA, float powerB) {
 
-  int powerA_int = static_cast<int>(map(powerA, -100, 100, -255, 255));
-  int powerB_int = static_cast<int>(map(powerB, -100, 100, -255, 255));
+  int powerA_int = static_cast<int>(map(powerA, -100, 100, -249, 249));
+  int powerB_int = static_cast<int>(map(powerB, -100, 100, -249, 249));
   
   // Motor A
   if (powerA_int >= 0){ // Forward
@@ -84,8 +84,8 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   }
-  Serial.println(powerA_int);
-  analogWrite(enA, abs(powerA_int)); // Power
+  // Serial.println(powerA_int);
+  analogWrite(enA, abs(powerA_int / 2)); // Power
 
  // Motor B
   if (powerB_int >= 0){ // Forward
@@ -97,8 +97,8 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in4, HIGH);
   }
 
-  Serial.println(powerB_int);
-  analogWrite(enB, abs(powerB_int)); // Power
+  // Serial.println(powerB_int);
+  analogWrite(enB, abs(powerB_int / 2)); // Power
 
 }
 
@@ -166,5 +166,5 @@ void loop() {
   // Serial.print("\tEngine 2 Power: ");
   // Serial.println(engine2Power);
 
-  delay(500);
+  delay(10);
 }
