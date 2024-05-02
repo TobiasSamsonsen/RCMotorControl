@@ -1,63 +1,89 @@
 #include <EnableInterrupt.h>
-#include <math.h> // For tan function
+#include <StandardCplusplus.h>
+#include <math.h>
 
 #define NUM_CHANNELS 2 // Number of channels you want to support
 const int INPUT_CHANNEL_PINS[] = {A0, A1}; // Corrected pin assignments
 
 // Motor A connections
-int enA = 9;
-int in1 = 8;
-int in2 = 7;
+#define enA 9
+#define in1 8
+#define in2 7
 // Motor B connections
-int enB = 3;
-int in3 = 5;
-int in4 = 4;
+#define enB 3
+#define in3 5
+#define in4 4
 
-// InputChannel structure
-struct InputChannel {
+// generic helper function for mapping one range into another
+template <typename T, typename U, typename V>
+V mapRange(T value, T in_min, T in_max, U out_min, U out_max) {
+    U out_value;
+    if (value >= in_min) {
+        out_value = (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    } else {
+        out_value = out_min;
+    }
+    out_value = constrain(out_value, out_min, out_max);
+    return out_value;
+}
+
+class InputChannel {
+public:
   int pin;
   volatile uint32_t startTime;
   volatile uint16_t pulseDuration;
-  int value;
+  float value;
+  uint16_t rangeMin;
+  uint16_t rangeMax;
+
+  InputChannel(int pin, uint16_t rangeMin, uint16_t rangeMax) : pin(pin), rangeMin(rangeMin), rangeMax(rangeMax) {
+    startTime = 0;
+    pulseDuration = 0;
+    value = 0.0f;
+  }
+
+  void handleInterrupt() {
+    if (digitalRead(pin) == HIGH) {
+      startTime = micros();
+    } else {
+      pulseDuration = micros() - startTime;
+      if (pulseDuration > 3000) {
+        pulseDuration = (this->rangeMax + this->rangeMin) / 2;
+      }
+      double low=-1.0, high=1.0;
+      // Map the pulse duration to a value (e.g., 1000-2000us to -1.0 to 1.0)
+      value = mapRange<uint16_t, double, float>(static_cast<uint16_t>(pulseDuration), this->rangeMin, this->rangeMax, low, high);
+      // sensetivity function      
+      value = sin((PI/2) * value);
+    }
+  }
+
+  void debug() {
+    if (pin == A1) {
+      Serial.print("\rPulse Duration: " + String(pulseDuration) + " \t\t\t");
+      Serial.print("\r\t\t\tChannel value: " + String(value) + "\t\t\t");
+    }
+  }
 };
 
 // Array of input channels
-InputChannel inputChannels[NUM_CHANNELS];
-
-// Function prototype for handleInterrupt
-void handleInterrupt(int channelIndex);
+InputChannel inputChannels[NUM_CHANNELS] = {
+    InputChannel(A0, 920, 1792),
+    InputChannel(A1, 888, 1972)
+};
 
 // Interrupt handler functions for each channel
 void handleInterruptChannel0() {
-  handleInterrupt(0);
+  inputChannels[0].handleInterrupt();
 }
 
 void handleInterruptChannel1() {
-  handleInterrupt(1);
-}
-
-// Interrupt handler function
-void handleInterrupt(int channelIndex) {
-  InputChannel& channel = inputChannels[channelIndex];
-  if (digitalRead(channel.pin) == HIGH) {
-    channel.startTime = micros();
-  } 
-  else {
-    channel.pulseDuration = micros() - channel.startTime;
-    // Map the pulse duration to a value (e.g., 1000-2000us to 0-100%)
-    channel.value = map(channel.pulseDuration, 1000, 2000, -100, 100);
-    // Ensure the value stays within bounds
-    channel.value = constrain(channel.value, -100, 100);
-        
-    // Now you can use channel.value to control your device
-    // For example, write it to a motor controller or log it to Serial
-    }
+  inputChannels[1].handleInterrupt();
 }
 
 // Function to initialize input channels
 void setupInputChannels() {
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    inputChannels[i].pin = INPUT_CHANNEL_PINS[i];
     pinMode(inputChannels[i].pin, INPUT);
     // Use a different ISR for each channel
     if (i == 0) {
@@ -66,14 +92,13 @@ void setupInputChannels() {
     else if (i == 1) {
         enableInterrupt(inputChannels[i].pin, handleInterruptChannel1, CHANGE);
     }
- }
+  }
 }
-
 // Placeholder function to set the speed of an engine
 void setEngineSpeed(float powerA, float powerB) {
 
-  int powerA_int = static_cast<int>(map(powerA, -100, 100, -249, 249));
-  int powerB_int = static_cast<int>(map(powerB, -100, 100, -249, 249));
+  int powerA_int = mapRange<float, int, int>(powerA, -1.0, 1.0, -255, 255);
+  int powerB_int = mapRange<float, int, int>(powerA, -1.0, 1.0, -255, 255);
   
   // Motor A
   if (powerA_int >= 0){ // Forward
@@ -84,8 +109,7 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   }
-  // Serial.println(powerA_int);
-  analogWrite(enA, abs(powerA_int*0.7)); // Power
+  analogWrite(enA, abs(powerA_int * 0.4)); // Power
 
  // Motor B
   if (powerB_int >= 0){ // Forward
@@ -96,10 +120,8 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in3, LOW);
     digitalWrite(in4, HIGH);
   }
-
-  // Serial.println(powerB_int);
-  analogWrite(enB, abs(powerB_int*0.7)); // Power
-
+  //Serial.println("Left: " + String(powerA_int) + "\tRight: " + String(powerB_int));
+  analogWrite(enB, abs(powerB_int * 0.4)); // Power
 }
 
 void setup() {  
@@ -122,8 +144,11 @@ void setup() {
 float engine1Power = 0;
 float engine2Power = 0;
 
+// Function to calculate the absolute value of a float number
+#define absf(x) ((x)>0?(x):-(x))
+
 float deadzone(float value, float threshold) {
-  if (abs(value) <= threshold) {
+  if (absf(value) <= threshold) {
     return 0.0f;
   }
   return value;
@@ -139,32 +164,22 @@ float last_power = 0;
 
 void loop() {
   // Calculate the steering angle and power based on the input values
-  float steeringAngle = deadzone(inputChannels[0].value, 12); // Assuming the first channel controls steering
-  float power = deadzone((inputChannels[1].value) * -1, 1.); // Assuming the second channel controls power
+  float steeringAngle = deadzone(inputChannels[0].value*-1, 0.1) * 0.5; // Assuming the first channel controls steering
+  float power = deadzone(inputChannels[1].value*-1, 0.25); // Assuming the second channel controls power
   
   last_steering = smoothen(steeringAngle, last_steering);
   last_power = smoothen(power, last_power);
 
   // Calculate the power distribution between the engines
-  engine1Power = (last_power + last_steering) / 2;
-  engine2Power = (last_power - last_steering) / 2;
+  engine1Power = ((last_power + last_steering) / 2);
+  engine2Power = ((last_power - last_steering) / 2);
+  Serial.println("Left: " + String(engine1Power) + "\tRight: " + String(engine2Power));
 
   // Ensure the power values are within the expected range
-  engine1Power = constrain(engine1Power, -100, 100);
-  engine2Power = constrain(engine2Power, -100, 100);
-
+  engine1Power = constrain(engine1Power, -1.0, 1.0);
+  engine2Power = constrain(engine2Power, -1.0, 1.0);
   // Set the speed of the engines
+  //Serial.print("\rLeft: " + String(engine1Power) + "\tRight: " + String(engine2Power));
   setEngineSpeed(engine1Power, engine2Power);
 
-  // For debugging purposes, print the values to the serial monitor
-  // Serial.print("Steering Angle: ");
-  // Serial.print(last_steering);
-  // Serial.print("\tPower: ");
-  // Serial.print(last_power);
-  // Serial.print("\tEngine 1 Power: ");
-  // Serial.print(engine1Power);
-  // Serial.print("\tEngine 2 Power: ");
-  // Serial.println(engine2Power);
-
-  delay(10);
 }
