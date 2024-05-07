@@ -98,8 +98,10 @@ void setupInputChannels() {
 void setEngineSpeed(float powerA, float powerB) {
 
   int powerA_int = mapRange<float, int, int>(powerA, -1.0, 1.0, -255, 255);
-  int powerB_int = mapRange<float, int, int>(powerA, -1.0, 1.0, -255, 255);
+  int powerB_int = mapRange<float, int, int>(powerB, -1.0, 1.0, -255, 255);
   
+  Serial.print("\rLeft: " + String(powerA_int) + "\tRight: " + String(powerB_int));
+
   // Motor A
   if (powerA_int >= 0){ // Forward
     digitalWrite(in1, HIGH);
@@ -120,7 +122,7 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in3, LOW);
     digitalWrite(in4, HIGH);
   }
-  //Serial.println("Left: " + String(powerA_int) + "\tRight: " + String(powerB_int));
+  // Serial.println("Left: " + String(powerA_int) + "\tRight: " + String(powerB_int));
   analogWrite(enB, abs(powerB_int * 0.4)); // Power
 }
 
@@ -173,13 +175,13 @@ void loop() {
   // Calculate the power distribution between the engines
   engine1Power = ((last_power + last_steering) / 2);
   engine2Power = ((last_power - last_steering) / 2);
-  Serial.println("Left: " + String(engine1Power) + "\tRight: " + String(engine2Power));
+  // Serial.println("Left: " + String(engine1Power) + "\tRight: " + String(engine2Power));
 
   // Ensure the power values are within the expected range
   engine1Power = constrain(engine1Power, -1.0, 1.0);
   engine2Power = constrain(engine2Power, -1.0, 1.0);
   // Set the speed of the engines
-  //Serial.print("\rLeft: " + String(engine1Power) + "\tRight: " + String(engine2Power));
+  // Serial.print("\rLeft: " + String(engine1Power) + "\tRight: " + String(engine2Power));
   setEngineSpeed(engine1Power, engine2Power);
 
 }
