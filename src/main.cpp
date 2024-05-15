@@ -6,13 +6,13 @@
 const int INPUT_CHANNEL_PINS[] = {A0, A1}; // Corrected pin assignments
 
 // Motor A connections
-#define enA 9
-#define in1 8
-#define in2 7
+#define enB 9
+#define in3 8
+#define in4 7
 // Motor B connections
-#define enB 3
-#define in3 5
-#define in4 4
+#define enA 3
+#define in1 5
+#define in2 4
 
 // generic helper function for mapping one range into another
 template <typename T, typename U, typename V>
@@ -111,7 +111,7 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   }
-  analogWrite(enA, abs(powerA_int * 0.4)); // Power
+  analogWrite(enA, abs(powerA_int * 0.9)); // Power
 
  // Motor B
   if (powerB_int >= 0){ // Forward
@@ -123,7 +123,7 @@ void setEngineSpeed(float powerA, float powerB) {
     digitalWrite(in4, HIGH);
   }
   // Serial.println("Left: " + String(powerA_int) + "\tRight: " + String(powerB_int));
-  analogWrite(enB, abs(powerB_int * 0.4)); // Power
+  analogWrite(enB, abs(powerB_int * 0.9)); // Power
 }
 
 void setup() {  
@@ -166,7 +166,7 @@ float last_power = 0;
 
 void loop() {
   // Calculate the steering angle and power based on the input values
-  float steeringAngle = deadzone(inputChannels[0].value*-1, 0.1) * 0.5; // Assuming the first channel controls steering
+  float steeringAngle = deadzone(inputChannels[0].value*-1, 0.1) * 0.7; // Assuming the first channel controls steering
   float power = deadzone(inputChannels[1].value*-1, 0.25); // Assuming the second channel controls power
   
   last_steering = smoothen(steeringAngle, last_steering);
